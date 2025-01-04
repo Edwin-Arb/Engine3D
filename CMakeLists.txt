@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
-project(learn_3dzavr)
+project(Engine3D)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -94,7 +94,7 @@ add_executable(${CMAKE_PROJECT_NAME}
 if(APPLE OR UNIX)
     include_directories(/usr/local/include)
 else()
-    set(SFML_DIR "C:/Libraries/SFML/lib/cmake/SFML")
+    set(SFML_DIR "D:/ProgForSolutionProjects/SFML/lib/cmake/SFML")
     set(SFML_STATIC_LIBRARIES TRUE)
 endif()
 
