@@ -1,0 +1,25 @@
+# Build output
+build/
+out/
+cmake-build-*/
+
+# CMake generated
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+cmake_install.cmake
+install_manifest.txt
+
+# IDE - JetBrains (Rider / CLion)
+.idea/
+
+# IDE - Visual Studio
+.vs/
+bin/
+obj/
+*.user
+*.suo
+
+# OS
+Thumbs.db
+.DS_Store
