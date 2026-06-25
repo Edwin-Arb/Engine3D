@@ -7,6 +7,11 @@
 
 #include <iostream>
 
+constexpr GLint WIDTH_SCREEN  = 1000;
+constexpr GLint HEIGHT_SCREEN = 1000;
+
+// Called by the driver (when a debug context is active) whenever OpenGL has
+// something to report. Turns the raw report into readable console output.
 void APIENTRY OpenGLDebugCallback(
     GLenum Source,
     GLenum Type,
@@ -18,65 +23,43 @@ void APIENTRY OpenGLDebugCallback(
 {
     std::cerr << "\n========== OpenGL ==========\n" << "ID: " << Id << '\n' << "Severity: ";
 
-    switch (Source)
-    {
-    case GL_DEBUG_SOURCE_API:
-        {
-            std::cout << "API";
-            break;
-        }
-    case GL_DEBUG_SOURCE_SHADER_COMPILER:
-        {
-            std::cout << "Shader Compiler";
-            break;
-        }
-    case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
-        {
-            std::cout << "Window System";
-            break;
-        }
-    }
-
     switch (Severity)
     {
-    case GL_DEBUG_SEVERITY_HIGH:
-        {
-            std::cerr << "HIGH";
-            break;
-        }
-    case GL_DEBUG_SEVERITY_MEDIUM:
-        {
-            std::cerr << "MEDIUM";
-            break;
-        }
-    case GL_DEBUG_SEVERITY_LOW:
-        {
-            std::cerr << "LOW";
-            break;
-        }
-    case GL_DEBUG_SEVERITY_NOTIFICATION:
-        {
-            std::cerr << "NOTIFICATION";
-            break;
-        }
+    case GL_DEBUG_SEVERITY_HIGH:         std::cerr << "HIGH";         break;
+    case GL_DEBUG_SEVERITY_MEDIUM:       std::cerr << "MEDIUM";       break;
+    case GL_DEBUG_SEVERITY_LOW:          std::cerr << "LOW";          break;
+    case GL_DEBUG_SEVERITY_NOTIFICATION: std::cerr << "NOTIFICATION"; break;
     }
 
     std::cerr << "\nMessage: " << Message << "\n============================\n";
 }
 
+// --- Shader sources (GLSL) ---------------------------------------------------
+// Vertex shader shared by both triangles: passes the position straight through.
 const char* VertexShaderSource = "#version 330 core\n"
     "layout (location = 0) in vec3 aPos;\n"
     "void main()\n"
     "{\n"
     "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-    "}\0";
+    "}";
+
+// Fragment shader for the orange triangle.
 const char* FragmentShaderSource = "#version 330 core\n"
     "out vec4 FragColor;\n"
     "void main()\n"
     "{\n"
     "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-    "}\n\0";
+    "}";
 
+// Fragment shader for the yellow triangle (exercise 3: a second program).
+const char* FragmentShader2Source = "#version 330 core\n"
+    "out vec4 FragColor;\n"
+    "void main()\n"
+    "{\n"
+    "   FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);\n"
+    "}";
+
+// Keeps the OpenGL viewport in sync with the window size when it is resized.
 static void FramebufferSizeCallback(GLFWwindow* InWindow, GLint InWidth, GLint InHeight)
 {
     glViewport(0, 0, InWidth, InHeight);
@@ -84,6 +67,7 @@ static void FramebufferSizeCallback(GLFWwindow* InWindow, GLint InWidth, GLint I
 
 int main()
 {
+    // --- GLFW, window and OpenGL context -------------------------------------
     if (!glfwInit())
     {
         std::cerr << "Failed to initialize GLFW\n";
@@ -99,7 +83,7 @@ int main()
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    GLFWwindow* Window = glfwCreateWindow(1000, 1000, "Engine3D", nullptr, nullptr);
+    GLFWwindow* Window = glfwCreateWindow(WIDTH_SCREEN, HEIGHT_SCREEN, "Engine3D", nullptr, nullptr);
     if (!Window)
     {
         std::cerr << "Failed to create GLFW window\n";
@@ -110,25 +94,26 @@ int main()
     glfwMakeContextCurrent(Window);
     glfwSetFramebufferSizeCallback(Window, FramebufferSizeCallback);
 
-    // Load OpenGL function pointers via GLAD
+    // Load OpenGL function pointers via GLAD.
     GLint Version = gladLoadGL(glfwGetProcAddress);
-    if (Version == 0)
+    if (!Version)
     {
         std::cerr << "Failed to initialize OpenGL context (GLAD)\n";
         glfwTerminate();
         return -1;
     }
 
+    std::cout << "OpenGL " << GLAD_VERSION_MAJOR(Version) << "." << GLAD_VERSION_MINOR(Version) << "\n";
+    std::cout << "Renderer: " << glGetString(GL_RENDERER) << "\n";
+
+    // --- Optional debug output (only if the context was created in debug mode) ---
     GLint Flags;
     glGetIntegerv(GL_CONTEXT_FLAGS, &Flags);
-
     if (Flags & GL_CONTEXT_FLAG_DEBUG_BIT)
     {
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-
         glDebugMessageCallback(OpenGLDebugCallback, nullptr);
-
         glDebugMessageControl(
             GL_DEBUG_SOURCE_API,
             GL_DEBUG_TYPE_OTHER,
@@ -138,76 +123,142 @@ int main()
             GL_FALSE);
     }
 
-    std::cout << "OpenGL " << GLAD_VERSION_MAJOR(Version) << "." << GLAD_VERSION_MINOR(Version) << "\n";
-    std::cout << "Renderer: " << glGetString(GL_RENDERER) << "\n";
+    GLint Success = 0;
+    GLchar InfoLog[512] = {};
 
-    // 1. Lesson 2 - Creating a vertex shader 
-    GLuint VertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(VertexShader, 1, &VertexShaderSource, nullptr);
-    glCompileShader(VertexShader);
+    // ============================ Orange triangle ============================
+    // --- Shader program ---
+    // Vertex shader: create -> source -> compile -> check.
+    const GLuint VertexShaderOrange = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(VertexShaderOrange, 1, &VertexShaderSource, nullptr);
+    glCompileShader(VertexShaderOrange);
 
-    GLint Success;
-    GLchar InfoLog[512];
-    glGetShaderiv(VertexShader, GL_COMPILE_STATUS, &Success);
+    glGetShaderiv(VertexShaderOrange, GL_COMPILE_STATUS, &Success);
     if (!Success)
     {
-        glGetShaderInfoLog(VertexShader, 512, nullptr, InfoLog);
-        std::cerr << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << InfoLog << "\n";
+        glGetShaderInfoLog(VertexShaderOrange, 512, nullptr, InfoLog);
+        std::cerr << "ERROR::SHADER::VERTEX::ORANGE::COMPILATION_FAILED\n" << InfoLog << "\n";
     }
 
-    // 2. Lesson 2 - Creating a fragment shader (Color)
-    GLuint FragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(FragmentShader, 1, &FragmentShaderSource, nullptr);
-    glCompileShader(FragmentShader);
+    // Fragment shader (orange color).
+    Success = 0;
+    const GLuint FragmentShaderOrange = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(FragmentShaderOrange, 1, &FragmentShaderSource, nullptr);
+    glCompileShader(FragmentShaderOrange);
 
-    glGetShaderiv(FragmentShader, GL_COMPILE_STATUS, &Success);
+    glGetShaderiv(FragmentShaderOrange, GL_COMPILE_STATUS, &Success);
     if (!Success)
     {
-        glGetShaderInfoLog(FragmentShader, 512, nullptr, InfoLog);
-        std::cerr << "ERROR::FRAGMENT::SHADER::COMPILATION_FAILED\n" << InfoLog << "\n";
+        glGetShaderInfoLog(FragmentShaderOrange, 512, nullptr, InfoLog);
+        std::cerr << "ERROR::SHADER::FRAGMENT::ORANGE::COMPILATION_FAILED\n" << InfoLog << "\n";
     }
 
-    // 3. Lesson 2 a shader program
-    GLuint ShaderProgram = glCreateProgram();
-    glAttachShader(ShaderProgram, VertexShader);
-    glAttachShader(ShaderProgram, FragmentShader);
-    glLinkProgram(ShaderProgram);
+    // Program: create -> attach both shaders -> link -> check.
+    Success = 0;
+    const GLuint ShaderProgramOrange = glCreateProgram();
+    glAttachShader(ShaderProgramOrange, VertexShaderOrange);
+    glAttachShader(ShaderProgramOrange, FragmentShaderOrange);
+    glLinkProgram(ShaderProgramOrange);
 
-    glGetProgramiv(ShaderProgram, GL_LINK_STATUS, &Success);
+    glGetProgramiv(ShaderProgramOrange, GL_LINK_STATUS, &Success);
     if (!Success)
     {
-        glGetProgramInfoLog(ShaderProgram, 512, nullptr, InfoLog);
-        std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << InfoLog << "\n";
+        glGetProgramInfoLog(ShaderProgramOrange, 512, nullptr, InfoLog);
+        std::cerr << "ERROR::SHADER::PROGRAM::ORANGE::LINKING_FAILED\n" << InfoLog << "\n";
     }
 
-    glDeleteShader(VertexShader);
-    glDeleteShader(FragmentShader);
+    // The shaders are baked into the program now; the standalone objects can go.
+    glDeleteShader(VertexShaderOrange);
+    glDeleteShader(FragmentShaderOrange);
 
-    // 4. Lesson 2 - Creating a shader
-    float Vertices[] =
+    // --- Geometry (right-hand triangle) ---
+    GLfloat VerticesOrange[] =
     {
-        -0.5f, -0.5f, 0.0f,
-        0.5f, -0.5f, 0.0f,
-        0.0f, 0.5f, 0.0f
+        0.8f, -0.5f, 0.0f,
+        0.0f, -0.5f, 0.0f,
+        0.4f,  0.5f, 0.0f,
     };
 
-    GLuint VBO, VAO;
+    GLuint OrangeVBO, OrangeVAO;
+    glGenBuffers(1, &OrangeVBO);
+    glGenVertexArrays(1, &OrangeVAO);
 
-    glGenBuffers(1, &VBO);
-    glGenVertexArrays(1, &VAO);
-
-    glBindVertexArray(VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertices), Vertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), static_cast<const void*>(0)); // TODO: check with a nullptr
-
+    glBindVertexArray(OrangeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, OrangeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(VerticesOrange), VerticesOrange, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), nullptr);
     glEnableVertexAttribArray(0);
 
-    // glBindBuffer(GL_ARRAY_BUFFER, 0);
-    // glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 
-    // Main loop
+    // ============================ Yellow triangle ============================
+    // --- Shader program ---
+    // Vertex shader (same source as the orange one).
+    Success = 0;
+    const GLuint VertexShaderYellow = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(VertexShaderYellow, 1, &VertexShaderSource, nullptr);
+    glCompileShader(VertexShaderYellow);
+
+    glGetShaderiv(VertexShaderYellow, GL_COMPILE_STATUS, &Success);
+    if (!Success)
+    {
+        glGetShaderInfoLog(VertexShaderYellow, 512, nullptr, InfoLog);
+        std::cerr << "ERROR::SHADER::VERTEX::YELLOW::COMPILATION_FAILED\n" << InfoLog << "\n";
+    }
+
+    // Fragment shader (yellow color).
+    Success = 0;
+    const GLuint FragmentShaderYellow = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(FragmentShaderYellow, 1, &FragmentShader2Source, nullptr);
+    glCompileShader(FragmentShaderYellow);
+
+    glGetShaderiv(FragmentShaderYellow, GL_COMPILE_STATUS, &Success);
+    if (!Success)
+    {
+        glGetShaderInfoLog(FragmentShaderYellow, 512, nullptr, InfoLog);
+        std::cerr << "ERROR::SHADER::FRAGMENT::YELLOW::COMPILATION_FAILED\n" << InfoLog << "\n";
+    }
+
+    // Program.
+    Success = 0;
+    const GLuint ShaderProgramYellow = glCreateProgram();
+    glAttachShader(ShaderProgramYellow, VertexShaderYellow);
+    glAttachShader(ShaderProgramYellow, FragmentShaderYellow);
+    glLinkProgram(ShaderProgramYellow);
+
+    glGetProgramiv(ShaderProgramYellow, GL_LINK_STATUS, &Success);
+    if (!Success)
+    {
+        glGetProgramInfoLog(ShaderProgramYellow, 512, nullptr, InfoLog);
+        std::cerr << "ERROR::SHADER::PROGRAM::YELLOW::LINKING_FAILED\n" << InfoLog << "\n";
+    }
+
+    glDeleteShader(VertexShaderYellow);
+    glDeleteShader(FragmentShaderYellow);
+
+    // --- Geometry (left-hand triangle) ---
+    GLfloat VerticesYellow[] =
+    {
+        -0.8f, -0.5f, 0.0f,
+         0.0f, -0.5f, 0.0f,
+        -0.4f,  0.5f, 0.0f,
+    };
+
+    GLuint YellowVBO, YellowVAO;
+    glGenBuffers(1, &YellowVBO);
+    glGenVertexArrays(1, &YellowVAO);
+
+    glBindVertexArray(YellowVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, YellowVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(VerticesYellow), VerticesYellow, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), nullptr);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    // --- Render loop ---------------------------------------------------------
     while (!glfwWindowShouldClose(Window))
     {
         if (glfwGetKey(Window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -218,18 +269,28 @@ int main()
         glClearColor(0.10f, 0.15f, 0.20f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // 5. Lesson 2 - Draw triangles
-        glUseProgram(ShaderProgram);
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES,0, 3);
+        // Orange triangle: its own program + VAO.
+        glUseProgram(ShaderProgramOrange);
+        glBindVertexArray(OrangeVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        // Yellow triangle: its own program + VAO.
+        glUseProgram(ShaderProgramYellow);
+        glBindVertexArray(YellowVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
 
         glfwSwapBuffers(Window);
         glfwPollEvents();
     }
 
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteProgram(ShaderProgram);
+    // --- Cleanup -------------------------------------------------------------
+    glDeleteBuffers(1, &OrangeVBO);
+    glDeleteVertexArrays(1, &OrangeVAO);
+    glDeleteProgram(ShaderProgramOrange);
+
+    glDeleteBuffers(1, &YellowVBO);
+    glDeleteVertexArrays(1, &YellowVAO);
+    glDeleteProgram(ShaderProgramYellow);
 
     glfwTerminate();
     return 0;
