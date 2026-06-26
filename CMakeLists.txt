@@ -10,10 +10,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 # ---------------------------------------------------------------------------
 # GLFW (built from source in ThirdParty/glfw)
 # ---------------------------------------------------------------------------
-set(GLFW_BUILD_DOCS     OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(GLFW_INSTALL        OFF CACHE BOOL "" FORCE)
+set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(ThirdParty/glfw)
 
 # ---------------------------------------------------------------------------
@@ -32,8 +32,20 @@ add_subdirectory(ThirdParty/glm)
 # ---------------------------------------------------------------------------
 # Engine executable
 # ---------------------------------------------------------------------------
-add_executable(Engine3D Engine3D/Engine3D.cpp)
+add_executable(Engine3D Engine3D/Engine3D.cpp
+        Engine3D/Shader.h
+        Engine3D/Shader.cpp)
 target_link_libraries(Engine3D PRIVATE glfw glad glm::glm)
 
 # Make Engine3D the startup project in generated Visual Studio solutions
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Engine3D)
+
+# ---------------------------------------------------------------------------
+# Copy shaders next to the executable after every build.
+# This allows loading shaders with a simple relative path:
+#     Shaders/3.3.Shader.vs
+# ---------------------------------------------------------------------------
+add_custom_command(TARGET Engine3D POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/Shaders
+        $<TARGET_FILE_DIR:Engine3D>/Shaders)
