@@ -103,24 +103,26 @@ int main()
     }
 
     // Shaders now carry the color per vertex, so one program drives both triangles.
-    Shader OurShaderProgram("Shaders/3.3.Shader.vs", "Shaders/3.3.Shader.fs");
+    // SHADER_DIR (set by CMake) is the absolute Shaders/ path; the adjacent string
+    // literals are concatenated at compile time into the full file path.
+    Shader OurShaderProgram(SHADER_DIR "/3.3.Shader.vs", SHADER_DIR "/3.3.Shader.fs");
 
     // --- Geometry (right-hand triangle) ---
-    GLfloat VerticesOrange[] =
+    GLfloat VerticesRight[] =
     {
         0.8f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
         0.0f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
         0.4f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
     };
 
-    GLuint OrangeVBO = 0;
-    GLuint OrangeVAO = 0;
-    glGenBuffers(1, &OrangeVBO);
-    glGenVertexArrays(1, &OrangeVAO);
+    GLuint RightVBO = 0;
+    GLuint RightVAO = 0;
+    glGenBuffers(1, &RightVBO);
+    glGenVertexArrays(1, &RightVAO);
 
-    glBindVertexArray(OrangeVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, OrangeVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(VerticesOrange), VerticesOrange, GL_STATIC_DRAW);
+    glBindVertexArray(RightVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, RightVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(VerticesRight), VerticesRight, GL_STATIC_DRAW);
 
     // Position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), nullptr);
@@ -134,22 +136,22 @@ int main()
     glBindVertexArray(0);
 
     // --- Geometry (left-hand triangle) ---
-    GLfloat VerticesYellow[] =
+    GLfloat VerticesLeft[] =
     {
         // positions        // colors
-        -0.8f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
-        -0.4f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
+        -0.8f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
+        -0.4f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
     };
 
-    GLuint YellowVBO = 0;
-    GLuint YellowVAO = 0;
-    glGenBuffers(1, &YellowVBO);
-    glGenVertexArrays(1, &YellowVAO);
+    GLuint LeftVBO = 0;
+    GLuint LeftVAO = 0;
+    glGenBuffers(1, &LeftVBO);
+    glGenVertexArrays(1, &LeftVAO);
 
-    glBindVertexArray(YellowVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, YellowVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(VerticesYellow), VerticesYellow, GL_STATIC_DRAW);
+    glBindVertexArray(LeftVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, LeftVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(VerticesLeft), VerticesLeft, GL_STATIC_DRAW);
     // Position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), nullptr);
     glEnableVertexAttribArray(0);
@@ -176,11 +178,11 @@ int main()
         OurShaderProgram.Use();
 
         // Right-hand triangle: bind its VAO and draw.
-        glBindVertexArray(OrangeVAO);
+        glBindVertexArray(RightVAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
         // Left-hand triangle: same shader, its own VAO.
-        glBindVertexArray(YellowVAO);
+        glBindVertexArray(LeftVAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
         glfwSwapBuffers(Window);
@@ -188,11 +190,11 @@ int main()
     }
 
     // --- Cleanup -------------------------------------------------------------
-    glDeleteBuffers(1, &OrangeVBO);
-    glDeleteVertexArrays(1, &OrangeVAO);
+    glDeleteBuffers(1, &RightVBO);
+    glDeleteVertexArrays(1, &RightVAO);
 
-    glDeleteBuffers(1, &YellowVBO);
-    glDeleteVertexArrays(1, &YellowVAO);
+    glDeleteBuffers(1, &LeftVBO);
+    glDeleteVertexArrays(1, &LeftVAO);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     glfwTerminate();

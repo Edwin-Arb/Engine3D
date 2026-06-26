@@ -41,11 +41,9 @@ target_link_libraries(Engine3D PRIVATE glfw glad glm::glm)
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Engine3D)
 
 # ---------------------------------------------------------------------------
-# Copy shaders next to the executable after every build.
-# This allows loading shaders with a simple relative path:
-#     Shaders/3.3.Shader.vs
+# Inject the absolute path of the source Shaders/ folder as the SHADER_DIR macro.
+# The program loads shaders straight from the source tree, so editing a .vs/.fs
+# and re-running applies the change instantly - no copying, no CMake cache reset.
+# (For a portable/shippable build later, copy shaders next to the .exe instead.)
 # ---------------------------------------------------------------------------
-add_custom_command(TARGET Engine3D POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Shaders
-        $<TARGET_FILE_DIR:Engine3D>/Shaders)
+target_compile_definitions(Engine3D PRIVATE SHADER_DIR="${CMAKE_SOURCE_DIR}/Shaders")
