@@ -177,6 +177,9 @@ int main()
         // One shader program for both triangles; the color comes from the vertices.
         OurShaderProgram.Use();
 
+        GLfloat OffsetX = 0.3f;
+        OurShaderProgram.SetFloat("OffsetX", OffsetX);
+        
         // Right-hand triangle: bind its VAO and draw.
         glBindVertexArray(RightVAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);

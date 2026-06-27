@@ -68,6 +68,8 @@ public:
      */
     void SetFloat(const std::string& InName, GLfloat InValue) const;
 
+    GLuint GetShaderProgram() const;
+    
 private:
     /**
      * @brief Checks for compilation errors in the shader.

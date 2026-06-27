@@ -91,6 +91,11 @@ void Shader::SetFloat(const std::string& InName, GLfloat InValue) const
     glUniform1f(glGetUniformLocation(ID, InName.c_str()), InValue);
 }
 
+GLuint Shader::GetShaderProgram() const
+{
+    return ID;
+}
+
 void Shader::CheckCompileErrors(GLuint InShader, const std::string& InType) const
 {
     GLint Success = 0;
